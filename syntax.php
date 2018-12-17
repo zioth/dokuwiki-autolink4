@@ -9,7 +9,8 @@ require_once(DOKU_PLUGIN.'syntax.php');
 
 class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 	private $subs = [];
-	private $found = [];
+	private $regexSubs = [];
+	private $simpleSubs = [];
 
 	public function __construct() {
 		$helper = plugin_load('helper', 'autolink4');
@@ -21,7 +22,19 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 			if (strlen($line)) {
 				$data = str_getcsv($line);
 				if (strlen($line[0]) && strlen($line[1])) {
-					$this->subs[] = ['match' => '\b' . trim($data[0]) . '\b', 'to' => trim($data[1]), 'in' => trim($data[2])];
+					$match = trim($data[0]);
+					$s = ['match' => '\b' . $match . '\b', 'to' => trim($data[1]), 'in' => trim($data[2])];
+					$this->subs[] = $s;
+
+					// If the search string is not a regex, cache it right away, so we don't have to loop through
+					// regexes later.
+					if (!preg_match('/[\\\[?.+*^$]/', $match)) {
+						$this->simpleSubs[$match] = $s;
+						$this->simpleSubs[$match]['text'] = $match;
+					}
+					else {
+						$this->regexSubs[] = $s;
+					}
 				}
 			}
 		}
@@ -77,28 +90,27 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 		$ns = getNS($ID);
 
 		// Load from cache
-		if (isset($this->found[$match])) {
-			$s = $this->found[$match];
+		if (isset($this->simpleSubs[$match])) {
+			$s = $this->simpleSubs[$match];
 			if ($this->_checkNs($ns, $s['in'])) {
-				$mod = $s;
-				$mod['text'] = $match;
-				return $mod;
+				return $s;
 			}
 		}
 
 		// Annoyingly, there's no way (I know of) to determine which match sent us here, so we have to loop through the
 		// whole list.
-		foreach ($this->subs as &$s) {
-			if (preg_match('/' . $s['match'] . '/i', $match)) {
+		foreach ($this->regexSubs as &$s) {
+			if (preg_match('/^' . $s['match'] . '$/', $match)) {
 				// Cache found strings
-				if (!isset($this->found[$match])) {
-					$this->found[$match] = &$s;
+				$mod = null;
+				if (!isset($this->simpleSubs[$match])) {
+					$mod = $s;
+					$mod['text'] = $match;
+					$this->simpleSubs[$match] = $mod;
 				}
 
 				// Check that it's in the right namespace
 				if ($this->_checkNs($ns, $s['in'])) {
-					$mod = $s;
-					$mod['text'] = $match;
 					return $mod;
 				}
 			}
