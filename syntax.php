@@ -11,30 +11,33 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 	private $subs = [];
 	private $regexSubs = [];
 	private $simpleSubs = [];
+	private $didInit = false;
+	
+	static $MATCH = 0;
+	static $TO = 1;
+	static $IN = 2;
+	static $ORIG = 3;
+	static $TEXT = 4;
 
 	public function __construct() {
 		$helper = plugin_load('helper', 'autolink4');
 		$cfg = $helper->loadConfigFile();
 
+		// Convert the config into usable data.
 		$lines = preg_split('/[\n\r]+/', $cfg);
 		foreach ($lines as $line) {
 			$line = trim($line);
 			if (strlen($line)) {
 				$data = str_getcsv($line);
-				if (strlen($line[0]) && strlen($line[1])) {
-					$match = trim($data[0]);
-					$s = ['match' => '\b' . $match . '\b', 'to' => trim($data[1]), 'in' => trim($data[2])];
+				if (strlen($data[self::$MATCH]) && strlen($data[self::$TO])) {
+					$orig = trim($data[0]);
+					$s = [
+						'\b' . $orig . '\b',
+						trim($data[self::$TO]),
+						isset($data[self::$IN]) ? trim($data[self::$IN]) : null,
+						$orig
+					];
 					$this->subs[] = $s;
-
-					// If the search string is not a regex, cache it right away, so we don't have to loop through
-					// regexes later.
-					if (!preg_match('/[\\\[?.+*^$]/', $match)) {
-						$this->simpleSubs[$match] = $s;
-						$this->simpleSubs[$match]['text'] = $match;
-					}
-					else {
-						$this->regexSubs[] = $s;
-					}
 				}
 			}
 		}
@@ -71,7 +74,7 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 	 */
 	function connectTo($mode) {
 		foreach ($this->subs as $s) {
-			$this->Lexer->addSpecialPattern($s['match'], $mode, 'plugin_autolink4');
+			$this->Lexer->addSpecialPattern($s[self::$MATCH], $mode, 'plugin_autolink4');
 		}
 	}
 
@@ -86,13 +89,31 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 	 * @return array|string
 	 */
 	function handle($match, $state, $pos, Doku_Handler $handler) {
+		// Save initialization of regexSubs and simpleSubs until now. No reason to do all that pre-processing
+		// if there aren't any substitutions to make.
+		if (!$this->didInit) {
+			$this->didInit = true;
+			foreach ($this->subs as $s) {
+				$orig = $s[self::$ORIG];
+				// If the search string is not a regex, cache it right away, so we don't have to loop through
+				// regexes later.
+				if (!preg_match('/[\\\[?.+*^$]/', $orig)) {
+					$this->simpleSubs[$orig] = $s;
+					$this->simpleSubs[$orig][self::$TEXT] = $orig;
+				}
+				else {
+					$this->regexSubs[] = $s;
+				}
+			}
+		}
+
 		global $ID;
 		$ns = getNS($ID);
 
 		// Load from cache
 		if (isset($this->simpleSubs[$match])) {
 			$s = $this->simpleSubs[$match];
-			if ($this->_checkNs($ns, $s['in'])) {
+			if ($this->_checkNs($ns, $s[self::$IN])) {
 				return $s;
 			}
 		}
@@ -100,17 +121,17 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 		// Annoyingly, there's no way (I know of) to determine which match sent us here, so we have to loop through the
 		// whole list.
 		foreach ($this->regexSubs as &$s) {
-			if (preg_match('/^' . $s['match'] . '$/', $match)) {
-				// Cache found strings
+			if (preg_match('/^' . $s[self::$MATCH] . '$/', $match)) {
+				// Add all found matches to simpleSubs, so we don't have to loop more than once for the same string.
 				$mod = null;
 				if (!isset($this->simpleSubs[$match])) {
 					$mod = $s;
-					$mod['text'] = $match;
+					$mod[self::$TEXT] = $match;
 					$this->simpleSubs[$match] = $mod;
 				}
 
 				// Check that it's in the right namespace
-				if ($this->_checkNs($ns, $s['in'])) {
+				if ($this->_checkNs($ns, $s[self::$IN])) {
 					return $mod;
 				}
 			}
@@ -133,7 +154,7 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 			$renderer->doc .= $data;
 		}
 		else {
-			$renderer->doc .= $renderer->internallink($data['to'], $data['text']);
+			$renderer->doc .= $renderer->internallink($data[self::$TO], $data[self::$TEXT]);
 		}
 	}
 
