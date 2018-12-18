@@ -6,6 +6,9 @@ require_once(DOKU_PLUGIN.'syntax.php');
 
 //TODO: Future features:
 // - Clicking on the link shows the page abstract (fetched with ajax). The popup has a link to the page.
+//TODO: Bugs:
+// - lexer combines all plugin search strings. If you have too many links (something between 500 and 1000), the regex
+//   gets too long. This has to be changed to an action plugin to fix that, and we can combined regexes in chunks.
 
 class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 	private $subs = [];

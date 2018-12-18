@@ -8,7 +8,7 @@
 if(!defined('DOKU_INC')) die();
 
 class helper_plugin_autolink4 extends DokuWiki_Admin_Plugin {
-	const CONFIG_FILE = DOKU_CONF . '/autolink4.conf';
+	const CONFIG_FILE = DOKU_CONF . 'autolink4.conf';
 
 	/**
 	 * Saves the config file
