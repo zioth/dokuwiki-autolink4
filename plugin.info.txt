@@ -1,7 +1,7 @@
 base    fastwiki
 author  Eli Fenton
 email
-date    2018-12-17
+date    2018-12-19
 name    Autolink 4
 desc    Automatically link a user-defined set of terms, without editing page content.
 url     https://www.dokuwiki.org/plugin:autolink4

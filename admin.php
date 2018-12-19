@@ -17,6 +17,7 @@ class admin_plugin_autolink4 extends DokuWiki_Admin_Plugin {
 	protected $hlp;
 
 	public function __construct() {
+		/** @type helper_plugin_autolink4 $this->hlp */
 		$this->hlp = plugin_load('helper', 'autolink4');
 	}
 

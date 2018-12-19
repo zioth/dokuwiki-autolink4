@@ -7,8 +7,8 @@ require_once(DOKU_PLUGIN.'syntax.php');
 //TODO: Future features:
 // - Clicking on the link shows the page abstract (fetched with ajax). The popup has a link to the page.
 //TODO: Bugs:
-// - lexer combines all plugin search strings. If you have too many links (something between 500 and 1000), the regex
-//   gets too long. This has to be changed to an action plugin to fix that, and we can combined regexes in chunks.
+// - lexer combines all plugin search strings. If you have too many links in a namespace (something between 500 and 1000),
+//   the regex gets too long. This has to be changed to an action plugin to fix that, and we can combined regexes in chunks.
 
 class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 	private $subs = [];
@@ -23,6 +23,7 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 	static $TEXT = 4;
 
 	public function __construct() {
+		/** @type helper_plugin_autolink4 $helper */
 		$helper = plugin_load('helper', 'autolink4');
 		$cfg = $helper->loadConfigFile();
 
@@ -76,8 +77,14 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 	 * @param $mode
 	 */
 	function connectTo($mode) {
+		global $ID;
+		$ns = getNS($ID);
+
 		foreach ($this->subs as $s) {
-			$this->Lexer->addSpecialPattern($s[self::$MATCH], $mode, 'plugin_autolink4');
+			// Check that it's in the right namespace
+			if ($this->_inNS($ns, $s[self::$IN])) {
+				$this->Lexer->addSpecialPattern($s[self::$MATCH], $mode, 'plugin_autolink4');
+			}
 		}
 	}
 
@@ -115,10 +122,7 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 
 		// Load from cache
 		if (isset($this->simpleSubs[$match])) {
-			$s = $this->simpleSubs[$match];
-			if ($this->_checkNs($ns, $s[self::$IN])) {
-				return $s;
-			}
+			return $this->simpleSubs[$match];
 		}
 
 		// Annoyingly, there's no way (I know of) to determine which match sent us here, so we have to loop through the
@@ -133,10 +137,7 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 					$this->simpleSubs[$match] = $mod;
 				}
 
-				// Check that it's in the right namespace
-				if ($this->_checkNs($ns, $s[self::$IN])) {
-					return $mod;
-				}
+				return $mod;
 			}
 		}
 
@@ -156,8 +157,11 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 		if (is_string($data)) {
 			$renderer->doc .= $data;
 		}
-		else {
+		else if ($mode == 'xhtml') {
 			$renderer->doc .= $renderer->internallink($data[self::$TO], $data[self::$TEXT]);
+		}
+		else {
+			$renderer->doc .= $data[self::$ORIG];
 		}
 	}
 
@@ -169,7 +173,7 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 	 * @param string $test - Look for this namespace.
 	 * @return bool
 	 */
-	function _checkNs($ns, $test) {
+	function _inNS($ns, $test) {
 		$len = strlen($test);
 		return !$len || substr($ns, 0, $len) == $test;
 	}
