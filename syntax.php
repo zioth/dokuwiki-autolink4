@@ -162,7 +162,7 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 	 * @param string $mode
 	 * @param Doku_Renderer $renderer
 	 * @param array|string $data - Data from handle()
-	 * @return bool|void
+	 * @return bool
 	 */
 	function render($mode, Doku_Renderer $renderer, $data) {
 		if (is_string($data)) {
@@ -179,6 +179,7 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 		else {
 			$renderer->doc .= $data[self::$ORIG];
 		}
+		return true;
 	}
 
 
