@@ -4,25 +4,38 @@ if(!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
 if(!defined('DOKU_REL')) define('DOKU_REL', '/dokuwiki/');
 require_once(DOKU_PLUGIN.'syntax.php');
 
-//TODO: Future features:
-// - Clicking on the link shows the page abstract (fetched with ajax). The popup has a link to the page.
 //TODO: Bugs:
 // - lexer combines all plugin search strings. If you have too many links in a namespace (something between 500 and 1000),
 //   the regex gets too long. This has to be changed to an action plugin to fix that, and we can combined regexes in chunks.
 
+/**
+ * Autolink 4 DokuWiki plugin
+ *
+ * @license    MIT
+ * @author     Eli Fenton
+ */
 class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 	private $subs = [];
 	private $regexSubs = [];
 	private $simpleSubs = [];
 	private $didInit = false;
-	
-	static $MATCH = 0;
+	/** @type helper_plugin_autotooltip $tooltip */
+	private $tooltip;
+
+	// Values from the file
+	static $ORIG = 0;
 	static $TO = 1;
 	static $IN = 2;
-	static $ORIG = 3;
-	static $TEXT = 4;
+	static $TOOLTIP = 3;
+	// Calculated values
+	static $MATCH = 4;
+	static $TEXT = 5;
 
 	public function __construct() {
+		if (!plugin_isdisabled('autotooltip')) {
+			$this->tooltip = plugin_load('helper', 'autotooltip');
+		}
+
 		/** @type helper_plugin_autolink4 $helper */
 		$helper = plugin_load('helper', 'autolink4');
 		$cfg = $helper->loadConfigFile();
@@ -33,15 +46,16 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 			$line = trim($line);
 			if (strlen($line)) {
 				$data = str_getcsv($line);
-				if (strlen($data[self::$MATCH]) && strlen($data[self::$TO])) {
-					$orig = trim($data[0]);
-					$s = [
-						'\b' . $orig . '\b',
+
+				if (strlen($data[self::$ORIG]) && strlen($data[self::$TO])) {
+					$orig = trim($data[self::$ORIG]);
+					$this->subs[] = [
+						$orig,
 						trim($data[self::$TO]),
 						isset($data[self::$IN]) ? trim($data[self::$IN]) : null,
-						$orig
+						isset($data[self::$TOOLTIP]) ? strstr($data[self::$TOOLTIP], 'tt') !== FALSE : false,
+						'\b' . $orig . '\b'
 					];
-					$this->subs[] = $s;
 				}
 			}
 		}
@@ -117,9 +131,6 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 			}
 		}
 
-		global $ID;
-		$ns = getNS($ID);
-
 		// Load from cache
 		if (isset($this->simpleSubs[$match])) {
 			return $this->simpleSubs[$match];
@@ -158,7 +169,12 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 			$renderer->doc .= $data;
 		}
 		else if ($mode == 'xhtml') {
-			$renderer->doc .= $renderer->internallink($data[self::$TO], $data[self::$TEXT]);
+			if ($this->tooltip && $data[self::$TOOLTIP]) {
+				$renderer->doc .= $this->tooltip->forWikilink($data[self::$TO], $data[self::$TEXT]);
+			}
+			else {
+				$renderer->internallink($data[self::$TO], $data[self::$TEXT]);
+			}
 		}
 		else {
 			$renderer->doc .= $data[self::$ORIG];

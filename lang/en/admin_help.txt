@@ -1,10 +1,12 @@
 ====== Auto Link 4 ======
 //by Eli Fenton//
 
-Lines consist of three fields separated by commas:
+Lines consist of four fields separated by commas:
   * Text to find. This can include certain regular expression characters, like square brackets and question marks. Pipe (|) and parentheses are not allowed.
   * The link for the text.
   * The namespace where the replacement is done. Omit this field to replace everywhere.
+  * Flags. Supported values:
+    * tt: Hovering over this link will show a tooltip with the page title and abstract. Requires the [[https://www.dokuwiki.org/plugin:autotooltip|autotooltip]] plugin.
 
 For example, this will link the words "Thing," "thing," "Things" and "things" to mywiki:thing, but only inside the mywiki namespace:
 

@@ -17,7 +17,7 @@ class admin_plugin_autolink4 extends DokuWiki_Admin_Plugin {
 	protected $hlp;
 
 	public function __construct() {
-		/** @type helper_plugin_autolink4 $this->hlp */
+		/** @type helper_plugin_autolink4 $this ->hlp */
 		$this->hlp = plugin_load('helper', 'autolink4');
 	}
 
@@ -40,8 +40,8 @@ class admin_plugin_autolink4 extends DokuWiki_Admin_Plugin {
 	 */
 	public function handle() {
 		global $INPUT;
-		if($INPUT->post->has('aldata')) {
-			if(!$this->hlp->saveConfigFile($INPUT->post->str('aldata'))) {
+		if ($INPUT->post->has('aldata')) {
+			if (!$this->hlp->saveConfigFile($INPUT->post->str('aldata'))) {
 				msg('Failed to save data', 1);
 			}
 		}
@@ -52,15 +52,30 @@ class admin_plugin_autolink4 extends DokuWiki_Admin_Plugin {
 	 */
 	public function html() {
 		global $lang;
+		$config = $this->hlp->loadConfigFile();
+
+		$lines = preg_split('/\r?\n/', $config);
+		$allTt = true;
+		foreach ($lines as $line) {
+			if (!preg_match('/^.*,.*,.*,.*\btt\b.*/', $line)) {
+				$allTt = false;
+				break;
+			}
+		}
+
 		echo $this->locale_xhtml('admin_help');
+
+		if (!plugin_isdisabled('autotooltip') && plugin_load('helper', 'autotooltip')) {
+			echo '<p><label onclick="plugin_autolink4.toggleTooltips(this.querySelector(\'input\').checked)"><input type="checkbox" name="tooltips" value="' . $allTt . '"/><span> Enable tooltips for all</span></label></p>';
+		}
+
 		echo '<form action="" method="post" >';
 		echo '<input type="hidden" name="do" value="admin" />';
 		echo '<input type="hidden" name="page" value="autolink4" />';
-		echo '<textarea class="edit" rows="15" cols="80" style="height: 500px" name="aldata">';
-		echo formtext($this->hlp->loadConfigFile());
+		echo '<textarea class="edit plugin-autolink4__admintext" rows="15" cols="80" style="height: 500px" name="aldata">';
+		echo formtext($config);
 		echo '</textarea><br/><br/>';
 		echo '<input type="submit" value="' . $lang['btn_save'] . '" class="button" />';
 		echo '</form>';
 	}
-
 }
