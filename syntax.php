@@ -95,8 +95,8 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 		$ns = getNS($ID);
 
 		foreach ($this->subs as $s) {
-			// Check that it's in the right namespace
-			if ($this->_inNS($ns, $s[self::$IN])) {
+			// Check that it's in the right namespace, and skip links to the current page.
+			if ($this->_inNS($ns, $s[self::$IN]) && $s[self::$TO] != $ID) {
 				$this->Lexer->addSpecialPattern($s[self::$MATCH], $mode, 'plugin_autolink4');
 			}
 		}
