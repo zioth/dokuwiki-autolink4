@@ -160,7 +160,7 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 	 * Render the replaced links.
 	 *
 	 * @param string $mode
-	 * @param Doku_Renderer $renderer
+	 * @param Doku_Renderer|Doku_Renderer_metadata $renderer
 	 * @param array|string $data - Data from handle()
 	 * @return bool
 	 */
@@ -177,7 +177,10 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 			}
 		}
 		else {
-			$renderer->doc .= $data[self::$ORIG];
+			if (!$renderer->capture) {
+				return false;
+			}
+			$renderer->doc .= $data[self::$TEXT];
 		}
 		return true;
 	}
