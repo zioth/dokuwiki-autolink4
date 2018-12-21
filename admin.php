@@ -44,6 +44,10 @@ class admin_plugin_autolink4 extends DokuWiki_Admin_Plugin {
 			if (!$this->hlp->saveConfigFile($INPUT->post->str('aldata'))) {
 				msg('Failed to save data', 1);
 			}
+			else {
+				// Break the cache, so that all pages are regenerated.
+				touch(DOKU_CONF."local.php");
+			}
 		}
 	}
 
