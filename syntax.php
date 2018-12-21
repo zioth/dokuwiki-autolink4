@@ -49,13 +49,14 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 
 				if (strlen($data[self::$ORIG]) && strlen($data[self::$TO])) {
 					$orig = trim($data[self::$ORIG]);
-					$this->subs[] = [
-						$orig,
-						trim($data[self::$TO]),
-						isset($data[self::$IN]) ? trim($data[self::$IN]) : null,
-						isset($data[self::$TOOLTIP]) ? strstr($data[self::$TOOLTIP], 'tt') !== FALSE : false,
-						'\b' . $orig . '\b'
-					];
+					$s = [];
+					$s[self::$ORIG] = $orig;
+					$s[self::$TO] = trim($data[self::$TO]);
+					$s[self::$IN] = isset($data[self::$IN]) ? trim($data[self::$IN]) : null;
+					$s[self::$TOOLTIP] = isset($data[self::$TOOLTIP]) ? strstr($data[self::$TOOLTIP], 'tt') !== FALSE : false;
+					// Add word breaks, and collapse one space (allows newlines).
+					$s[self::$MATCH] = '\b' . preg_replace('/ /', '\s', $orig) . '\b';
+					$this->subs[] = $s;
 				}
 			}
 		}
@@ -96,7 +97,7 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 
 		foreach ($this->subs as $s) {
 			// Check that it's in the right namespace, and skip links to the current page.
-			if ($this->_inNS($ns, $s[self::$IN]) && $s[self::$TO] != $ID) {
+			if ($this->_inNS($ns, $s[self::$IN]) && !$this->_isSamePage($s[self::$TO], $ID)) {
 				$this->Lexer->addSpecialPattern($s[self::$MATCH], $mode, 'plugin_autolink4');
 			}
 		}
@@ -196,5 +197,17 @@ class syntax_plugin_autolink4 extends DokuWiki_Syntax_Plugin {
 	function _inNS($ns, $test) {
 		$len = strlen($test);
 		return !$len || substr($ns, 0, $len) == $test;
+	}
+
+
+	/**
+	 * Are these two the same page>
+	 *
+	 * @param string $p1 - One page.
+	 * @param string $p2 - Another page.
+	 * @return bool
+	 */
+	function _isSamePage($p1, $p2) {
+		return preg_replace('/#.*/', '', $p1) == preg_replace('/#.*/', '', $p2);
 	}
 }
