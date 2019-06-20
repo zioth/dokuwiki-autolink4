@@ -29,13 +29,6 @@ class admin_plugin_autolink4 extends DokuWiki_Admin_Plugin {
 	}
 
 	/**
-	 * return prompt for admin menu
-	 */
-	public function getMenuText($language) {
-		return $this->getLang('name');
-	}
-
-	/**
 	 * handle user request
 	 */
 	public function handle() {
@@ -59,19 +52,31 @@ class admin_plugin_autolink4 extends DokuWiki_Admin_Plugin {
 		$config = $this->hlp->loadConfigFile();
 
 		$lines = preg_split('/\r?\n/', $config);
-		$allTt = true;
+		$allTt = 'checked';
+		$allOnce = 'checked';
 		foreach ($lines as $line) {
-			if (!preg_match('/^.*,.*,.*,.*\btt\b.*/', $line)) {
-				$allTt = false;
-				break;
+			if (!preg_match('/^\s*$/', $line)) {
+				if (!preg_match('/^.*,.*,.*,.*\btt\b.*/', $line)) {
+					$allTt = '';
+				}
+
+				if (!preg_match('/^.*,.*,.*,.*\bonce\b.*/', $line)) {
+					$allOnce = '';
+				}
 			}
 		}
 
 		echo $this->locale_xhtml('admin_help');
 
 		if (!plugin_isdisabled('autotooltip') && plugin_load('helper', 'autotooltip')) {
-			echo '<p><label onclick="plugin_autolink4.toggleTooltips(this.querySelector(\'input\').checked)"><input type="checkbox" name="tooltips" value="' . $allTt . '"/><span> Enable tooltips for all</span></label></p>';
+			echo '<p><label onclick="plugin_autolink4.toggleFlag(this.querySelector(\'input\').checked, \'tt\')">';
+			echo '<input type="checkbox" name="tooltips" ' . $allTt . '/>';
+			echo '<span> ' . $lang['enable_all_tooltips'] . '</span></label></p>';
 		}
+
+		echo '<p><label onclick="plugin_autolink4.toggleFlag(this.querySelector(\'input\').checked, \'once\')">';
+		echo '<input type="checkbox" name="linkonce" ' . $allOnce . '/>';
+		echo '<span> ' . $lang['enable_all_once'] . '</span></label></p>';
 
 		echo '<form action="" method="post" >';
 		echo '<input type="hidden" name="do" value="admin" />';

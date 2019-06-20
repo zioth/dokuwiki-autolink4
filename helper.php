@@ -6,9 +6,27 @@
  * @author     Eli Fenton
  */
 if(!defined('DOKU_INC')) die();
+require_once(DOKU_PLUGIN.'autolink4/consts.php');
 
 class helper_plugin_autolink4 extends DokuWiki_Admin_Plugin {
+	use autotooltip4_consts;
 	const CONFIG_FILE = DOKU_CONF . 'autolink4.conf';
+
+	static $didInit = false;
+	static $subs = [];
+	static $regexSubs = [];
+	static $simpleSubs = [];
+
+
+	public function getSubs() {
+		return self::$subs; //TODO: Remove this later?
+	}
+	public function getRegexSubs() {
+		return self::$regexSubs;
+	}
+	public function getSimpleSubs() {
+		return self::$simpleSubs;
+	}
 
 	/**
 	 * Saves the config file
@@ -20,12 +38,62 @@ class helper_plugin_autolink4 extends DokuWiki_Admin_Plugin {
 		return io_saveFile(self::CONFIG_FILE, cleanText($config));
 	}
 
+
 	/**
 	 * Load the config file
-	 *
-	 * @return string the raw text of the config
 	 */
 	public function loadConfigFile() {
-		return file_exists(self::CONFIG_FILE) ? io_readFile(self::CONFIG_FILE) : '';
+		if (file_exists(self::CONFIG_FILE)) {
+			return io_readFile(self::CONFIG_FILE);
+		}
+	}
+
+
+	/**
+	 * Load the config file
+	 */
+	public function loadAndProcessConfigFile() {
+		// Only load once, so we don't re-process with things like plugin:include.
+		if (self::$didInit) {
+			return;
+		}
+		self::$didInit = true;
+
+		if (file_exists(self::CONFIG_FILE)) {
+			$cfg = io_readFile(self::CONFIG_FILE);
+
+			// Convert the config into usable data.
+			$lines = preg_split('/[\n\r]+/', $cfg);
+			foreach ($lines as $line) {
+				$line = trim($line);
+				if (strlen($line)) {
+					$data = str_getcsv($line);
+
+					if (strlen($data[self::$ORIG]) && strlen($data[self::$TO])) {
+						$orig = trim($data[self::$ORIG]);
+						$s = [];
+						$s[self::$ORIG] = $orig;
+						$s[self::$TO] = trim($data[self::$TO]);
+						$s[self::$IN] = isset($data[self::$IN]) ? trim($data[self::$IN]) : null;
+						$s[self::$FLAGS] = isset($data[self::$FLAGS]) ? trim($data[self::$FLAGS]) : null;
+						$s[self::$TOOLTIP] = isset($data[self::$FLAGS]) ? strstr($data[self::$FLAGS], 'tt') !== FALSE : false;
+						$s[self::$ONCE] = isset($data[self::$FLAGS]) ? strstr($data[self::$FLAGS], 'once') !== FALSE : false;
+						// Add word breaks, and collapse one space (allows newlines).
+						$s[self::$MATCH] = '\b' . preg_replace('/ /', '\s', $orig) . '\b';
+						self::$subs[] = $s;
+
+						if (preg_match('/[\\\[?.+*^$]/', $orig)) {
+							self::$regexSubs[] = $s;
+						}
+						else {
+							// If the search string is not a regex, cache it right away, so we don't have to loop
+							// through regexes later.
+							self::$simpleSubs[$orig] = $s;
+							self::$simpleSubs[$orig][self::$TEXT] = $orig;
+						}
+					}
+				}
+			}
+		}
 	}
 }
