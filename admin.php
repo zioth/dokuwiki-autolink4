@@ -81,7 +81,7 @@ class admin_plugin_autolink4 extends DokuWiki_Admin_Plugin {
 		echo '<form action="" method="post" >';
 		echo '<input type="hidden" name="do" value="admin" />';
 		echo '<input type="hidden" name="page" value="autolink4" />';
-		echo '<textarea class="edit plugin-autolink4__admintext" rows="15" cols="80" style="height: 500px" name="aldata">';
+		echo '<textarea class="edit plugin-autolink4__admintext" rows="15" cols="80" style="height: 500px; width: 100%" name="aldata">';
 		echo formtext($config);
 		echo '</textarea><br/><br/>';
 		echo '<input type="submit" value="' . $lang['btn_save'] . '" class="button" />';

@@ -181,6 +181,6 @@ class syntax_plugin_autolink4_regex extends DokuWiki_Syntax_Plugin {
 	 * @return bool
 	 */
 	function _isSamePage($p1, $p2) {
-		return preg_replace('/#.*/', '', $p1) == preg_replace('/#.*/', '', $p2);
+		return $p1 == $p2;
 	}
 }
