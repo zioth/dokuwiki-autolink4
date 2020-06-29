@@ -8,7 +8,7 @@
 if(!defined('DOKU_INC')) die();
 require_once(DOKU_PLUGIN.'autolink4/consts.php');
 
-class helper_plugin_autolink4 extends DokuWiki_Admin_Plugin {
+class helper_plugin_autolink4 extends DokuWiki_Plugin {
 	use autotooltip4_consts;
 	const CONFIG_FILE = DOKU_CONF . 'autolink4.conf';
 

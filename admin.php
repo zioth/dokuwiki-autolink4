@@ -13,6 +13,8 @@ if(!defined('DOKU_INC')) die();
  *
  */
 class admin_plugin_autolink4 extends DokuWiki_Admin_Plugin {
+	//public function getInfo() {return '';}
+
 	/** @type helper_plugin_autolink4 */
 	protected $hlp;
 
