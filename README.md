@@ -1,5 +1,7 @@
 # Autolink4 plugin for dokuwiki
 
+This DokuWiki plugin automatically turns specified keywords into links to other wiki pages, similar to the default functionality of MediaWiki.
+
 Documentation may be found at: http://dokuwiki.org/plugin:autolink4
 
 ----
