@@ -11,4 +11,5 @@ trait autotooltip4_consts {
 	static $TEXT = 5;
 	static $TOOLTIP = 6;
 	static $ONCE = 7;
+	static $INWORD = 8;
 }

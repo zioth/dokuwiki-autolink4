@@ -1,6 +1,6 @@
 author  Eli Fenton
 email
-date    2020-06-29
+date    2020-10-25
 name    Autolink 4
 desc    Automatically link a user-defined set of terms, without editing page content.
 url     https://www.dokuwiki.org/plugin:autolink4

@@ -68,9 +68,15 @@ class helper_plugin_autolink4 extends DokuWiki_Plugin {
 				$line = trim($line);
 				if (strlen($line)) {
 					$data = str_getcsv($line);
-
 					if (strlen($data[self::$ORIG]) && strlen($data[self::$TO])) {
 						$orig = trim($data[self::$ORIG]);
+
+						// utf-8 codes don't work with addSpecialPattern().
+						// https://github.com/splitbrain/dokuwiki/issues/856
+						// This fix to hex-escape byte codes does not help:
+						//if (strlen($orig) != mb_strlen($orig, 'UTF8')) {
+						//	$orig = '\\x' . implode('\\x', str_split(implode('', unpack('H*', $orig)), 2));
+						//}
 						$s = [];
 						$s[self::$ORIG] = $orig;
 						$s[self::$TO] = trim($data[self::$TO]);
@@ -78,8 +84,16 @@ class helper_plugin_autolink4 extends DokuWiki_Plugin {
 						$s[self::$FLAGS] = isset($data[self::$FLAGS]) ? trim($data[self::$FLAGS]) : null;
 						$s[self::$TOOLTIP] = isset($data[self::$FLAGS]) ? strstr($data[self::$FLAGS], 'tt') !== FALSE : false;
 						$s[self::$ONCE] = isset($data[self::$FLAGS]) ? strstr($data[self::$FLAGS], 'once') !== FALSE : false;
+						$s[self::$INWORD] = isset($data[self::$FLAGS]) ? strstr($data[self::$FLAGS], 'inword') !== FALSE : false;
+
 						// Add word breaks, and collapse one space (allows newlines).
-						$s[self::$MATCH] = '\b' . preg_replace('/ /', '\s', $orig) . '\b';
+						if ($s[self::$INWORD]) {
+							$s[self::$MATCH] = preg_replace('/ /', '\s', $orig);
+						}
+						else {
+							$s[self::$MATCH] = '\b' . preg_replace('/ /', '\s', $orig) . '\b';
+						}
+
 						self::$subs[] = $s;
 
 						if (preg_match('/[\\\[?.+*^$]/', $orig)) {
