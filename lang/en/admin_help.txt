@@ -8,7 +8,10 @@ Lines consist of four fields separated by commas:
   * Flags, separated by a | character. Supported values:
     * tt: Hovering over this link will show a tooltip with the page title and abstract. Requires the [[https://www.dokuwiki.org/plugin:autotooltip|autotooltip]] plugin.
     * once: Only link the first occurrence of this tooltip.
+    * inword: Replace partial words. DokuWiki defines a word as characters surrounded by spaces or punctuation, so this is required for languages that do not require space between words.
 
 For example, this will link the words "Thing," "thing," "Things" and "things" to mywiki:thing, but only inside the mywiki namespace:
 
   [Tt]hings?, mywiki:thing, mywiki
+
+Non-Latin language support: In order to support most non-Latin languages, such as Chinese and Arabic, you will have to modify core DokuWiki code. See https://www.dokuwiki.org/plugin:autolink4#non-latin_language_support
