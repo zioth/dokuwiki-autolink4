@@ -1,7 +1,4 @@
 <?php
-if(!defined('DOKU_INC')) define('DOKU_INC',realpath(dirname(__FILE__).'/../../../').'/');
-if(!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
-if(!defined('DOKU_REL')) define('DOKU_REL', '/dokuwiki/');
 require_once(DOKU_PLUGIN.'syntax.php');
 require_once(DOKU_PLUGIN.'autolink4/consts.php');
 
@@ -27,8 +24,6 @@ class syntax_plugin_autolink4_regex extends DokuWiki_Syntax_Plugin {
 	private $tooltip;
 	/** @type helper_plugin_autolink4 $tooltip */
 	private $helper;
-
-	private $foundMatches;
 
 	public function __construct() {
 		if (!plugin_isdisabled('autotooltip')) {
@@ -69,12 +64,9 @@ class syntax_plugin_autolink4_regex extends DokuWiki_Syntax_Plugin {
 	 * @param $mode
 	 */
 	function connectTo($mode) {
-		global $ID;
-		$ns = getNS($ID);
-
 		foreach ($this->helper->getSubs() as $s) {
-			// Check that it's in the right namespace, and skip links to the current page.
-			if ($this->helper->inNS($ns, $s[self::$IN]) && !$this->_isSamePage($s[self::$TO], $ID)) {
+			// Skip links to the current page.
+			if (!$this->_isSamePage($s[self::$TO], $ID)) {
 				$this->Lexer->addSpecialPattern($s[self::$MATCH], $mode, 'plugin_autolink4_regex');
 			}
 		}
@@ -91,43 +83,7 @@ class syntax_plugin_autolink4_regex extends DokuWiki_Syntax_Plugin {
 	 * @return array|string
 	 */
 	function handle($match, $state, $pos, Doku_Handler $handler) {
-                global $ID;
-                $ns = getNS($ID);
-
-		if ($this->foundMatches[$match]) {
-			return $match;
-		}
-
-		// Load from cache
-		$s = $this->helper->getMatch($match, $ns);
-		if ($s != null) {
-			if ($s[self::$ONCE]) {
-				$this->foundMatches[$match] = true;
-			}
-			return $s;
-		}
-
-		// Annoyingly, there's no way (I know of) to determine which match sent us here, so we have to loop through the
-		// whole list.
-		foreach ($this->helper->getRegexSubs() as &$s) {
-			if (!preg_match('/^' . $s[self::$MATCH] . '$/', $match)) {
-				continue;
-			}
-
-			// In case the same match exists in two namespaces, we have to re-check the namespace.
-			if (!$this->helper->inNS($ns, $s[self::$IN]) || $this->_isSamePage($s[self::$TO], $ID)) {
-				continue;
-			}
-
-			if ($s[self::$ONCE]) {
-				$this->foundMatches[$match] = true;
-			}
-
-			// Cache all found matches, so we don't have to loop more than once for the same string.
-			return $this->helper->cacheMatch($match, $ns, $s);
-		}
-
-		return $match;
+		return $this->helper->getMatch($match);
 	}
 
 

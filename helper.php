@@ -17,12 +17,10 @@ class helper_plugin_autolink4 extends DokuWiki_Plugin {
 	static $regexSubs = []; // flat array of data
 	static $simpleSubs = []; // 2d map of [namespace][string match]=>data
 
+	private $ignoreMatches = []; // Ignore these, because they were already found once and they're configured to be unique.
 
 	public function getSubs() {
 		return self::$subs; //TODO: Remove this later?
-	}
-	public function getRegexSubs() {
-		return self::$regexSubs;
 	}
 
 	/**
@@ -56,53 +54,61 @@ class helper_plugin_autolink4 extends DokuWiki_Plugin {
 		}
 		self::$didInit = true;
 
-		if (file_exists(self::CONFIG_FILE)) {
-			$cfg = io_readFile(self::CONFIG_FILE);
+		if (!file_exists(self::CONFIG_FILE)) {
+			return;
+		}
 
-			// Convert the config into usable data.
-			$lines = preg_split('/[\n\r]+/', $cfg);
-			foreach ($lines as $line) {
-				$line = trim($line);
-				if (strlen($line)) {
-					$data = str_getcsv($line);
-					if (strlen($data[self::$ORIG]) && strlen($data[self::$TO])) {
-						$orig = trim($data[self::$ORIG]);
+		$cfg = io_readFile(self::CONFIG_FILE);
 
-						// utf-8 codes don't work with addSpecialPattern().
-						// https://github.com/splitbrain/dokuwiki/issues/856
-						// This fix to hex-escape byte codes does not help:
-						//if (strlen($orig) != mb_strlen($orig, 'UTF8')) {
-						//	$orig = '\\x' . implode('\\x', str_split(implode('', unpack('H*', $orig)), 2));
-						//}
-						$s = [];
-						$s[self::$ORIG] = $orig;
-						$s[self::$TO] = trim($data[self::$TO]);
-						$s[self::$IN] = isset($data[self::$IN]) ? trim($data[self::$IN]) : null;
-						$s[self::$FLAGS] = isset($data[self::$FLAGS]) ? trim($data[self::$FLAGS]) : null;
-						$s[self::$TOOLTIP] = isset($data[self::$FLAGS]) ? strstr($data[self::$FLAGS], 'tt') !== FALSE : false;
-						$s[self::$ONCE] = isset($data[self::$FLAGS]) ? strstr($data[self::$FLAGS], 'once') !== FALSE : false;
-						$s[self::$INWORD] = isset($data[self::$FLAGS]) ? strstr($data[self::$FLAGS], 'inword') !== FALSE : false;
+		global $ID;
+		$current_ns = getNS($ID);
 
-						// Add word breaks, and collapse one space (allows newlines).
-						if ($s[self::$INWORD]) {
-							$s[self::$MATCH] = preg_replace('/ /', '\s', $orig);
-						}
-						else {
-							$s[self::$MATCH] = '\b' . preg_replace('/ /', '\s', $orig) . '\b';
-						}
+		// Convert the config into usable data.
+		$lines = preg_split('/[\n\r]+/', $cfg);
+		foreach ($lines as $line) {
+			$line = trim($line);
+			if (strlen($line) == 0) {
+				continue;
+			}
 
-						self::$subs[] = $s;
+			$data = str_getcsv($line);
+			if (!strlen($data[self::$ORIG]) || !strlen($data[self::$TO])) {
+				continue;
+			}
 
-						if (preg_match('/[\\\[?.+*^$]/', $orig)) {
-							self::$regexSubs[] = $s;
-						}
-						else {
-							// If the search string is not a regex, cache it right away, so we don't have to loop
-							// through regexes later.
-							$s = $this->cacheMatch($orig, $s[self::$IN], $s);
-						}
-					}
-				}
+			$orig = trim($data[self::$ORIG]);
+
+			$ns = isset($data[self::$IN]) ? trim($data[self::$IN]) : null;
+			if (!$this->inNS($current_ns, $ns)) {
+				continue;
+			}
+
+			$s = [];
+			$s[self::$ORIG] = $orig;
+			$s[self::$TO] = trim($data[self::$TO]);
+			$s[self::$IN] = $ns;
+			$s[self::$FLAGS] = isset($data[self::$FLAGS]) ? trim($data[self::$FLAGS]) : null;
+			$s[self::$TOOLTIP] = isset($data[self::$FLAGS]) ? strstr($data[self::$FLAGS], 'tt') !== FALSE : false;
+			$s[self::$ONCE] = isset($data[self::$FLAGS]) ? strstr($data[self::$FLAGS], 'once') !== FALSE : false;
+			$s[self::$INWORD] = isset($data[self::$FLAGS]) ? strstr($data[self::$FLAGS], 'inword') !== FALSE : false;
+
+			// Add word breaks, and collapse one space (allows newlines).
+			if ($s[self::$INWORD]) {
+				$s[self::$MATCH] = preg_replace('/ /', '\s', $orig);
+			}
+			else {
+				$s[self::$MATCH] = '\b' . preg_replace('/ /', '\s', $orig) . '\b';
+			}
+
+			self::$subs[] = $s;
+
+			if (preg_match('/[\\\[?.+*^$]/', $orig)) {
+				self::$regexSubs[] = $s;
+			}
+			else {
+				// If the search string is not a regex, cache it right away, so we don't have to loop
+				// through regexes later.
+				$s = $this->cacheMatch($orig, $s);
 			}
 		}
 	}
@@ -111,27 +117,42 @@ class helper_plugin_autolink4 extends DokuWiki_Plugin {
         /**
          * Get a simple match
          */
-	public function getMatch($match, $ns) {
-		foreach (self::$simpleSubs as $key => &$vals) {
-			if ($this->inNS($ns, $key) && isset(self::$simpleSubs[$key][$match])) {
-				return self::$simpleSubs[$key][$match];
+	public function getMatch($match) {
+               	if ($this->ignoreMatches[$match]) {
+                       	return null;
+                }
+
+                // If there's a matching non-regex pattern, or we cached it after finding the regex patter on the page,
+                // we can load it from the cache.
+                if (isset(self::$simpleSubs[$match])) {
+                        $found = self::$simpleSubs[$match];
+                }
+
+		if ($found == null) {
+			// There's no way to determine which match sent us here, so we have to loop through the whole list.
+			foreach (self::$regexSubs as &$s) {
+				if (preg_match('/^' . $s[self::$MATCH] . '$/', $match)) {
+					// Cache the matched string, so we don't have to loop more than once for the same match.
+					$found = $this->cacheMatch($match, $s);
+					break;
+				}
 			}
 		}
-		return null;
+
+		if ($found != null && $found[self::$ONCE]) {
+			$this->ignoreMatches[$match] = true;
+		}
+		return $found;
 	}	
 
 
         /**
          * Cache a simple match
          */
-	public function cacheMatch($match, $ns, $data) {
-		if (!isset(self::$simpleSubs[$ns])) {
-			self::$simpleSubs[$ns] = [];
-		}
-
-		// Sometimes, we call this with a different text match (when caching regex)
+	public function cacheMatch($match, $data) {
+		// We usually call this with a different text match, so that two things can link to the same page.
 		$data[self::$TEXT] = $match;
-		self::$simpleSubs[$ns][$match] = $data;
+		self::$simpleSubs[$match] = $data;
 		return $data;
 	}	
 
