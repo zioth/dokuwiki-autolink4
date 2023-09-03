@@ -74,7 +74,7 @@ class syntax_plugin_autolink4_regex extends DokuWiki_Syntax_Plugin {
 
 		foreach ($this->helper->getSubs() as $s) {
 			// Check that it's in the right namespace, and skip links to the current page.
-			if ($this->_inNS($ns, $s[self::$IN]) && !$this->_isSamePage($s[self::$TO], $ID)) {
+			if ($this->helper->inNS($ns, $s[self::$IN]) && !$this->_isSamePage($s[self::$TO], $ID)) {
 				$this->Lexer->addSpecialPattern($s[self::$MATCH], $mode, 'plugin_autolink4_regex');
 			}
 		}
@@ -91,39 +91,40 @@ class syntax_plugin_autolink4_regex extends DokuWiki_Syntax_Plugin {
 	 * @return array|string
 	 */
 	function handle($match, $state, $pos, Doku_Handler $handler) {
+                global $ID;
+                $ns = getNS($ID);
+
 		if ($this->foundMatches[$match]) {
 			return $match;
 		}
 
 		// Load from cache
-		if (isset($this->helper->getSimpleSubs()[$match])) {
-			$s = $this->helper->getSimpleSubs()[$match];
+		$s = $this->helper->getMatch($match, $ns);
+		if ($s != null) {
 			if ($s[self::$ONCE]) {
 				$this->foundMatches[$match] = true;
 			}
-
 			return $s;
 		}
 
 		// Annoyingly, there's no way (I know of) to determine which match sent us here, so we have to loop through the
 		// whole list.
 		foreach ($this->helper->getRegexSubs() as &$s) {
+			if (!preg_match('/^' . $s[self::$MATCH] . '$/', $match)) {
+				continue;
+			}
+
+			// In case the same match exists in two namespaces, we have to re-check the namespace.
+			if (!$this->helper->inNS($ns, $s[self::$IN]) || $this->_isSamePage($s[self::$TO], $ID)) {
+				continue;
+			}
+
 			if ($s[self::$ONCE]) {
 				$this->foundMatches[$match] = true;
 			}
 
-			if (preg_match('/^' . $s[self::$MATCH] . '$/', $match)) {
-				// Add all found matches to simpleSubs, so we don't have to loop more than once for the same string.
-				$mod = null;
-				if (!isset($this->helper->getSimpleSubs()[$match])) {
-					$mod = $s;
-					$mod[self::$TEXT] = $match;
-					//TODO: Do this differently (cache locally).
-					$this->helper->getSimpleSubs()[$match] = $mod;
-				}
-
-				return $mod;
-			}
+			// Cache all found matches, so we don't have to loop more than once for the same string.
+			return $this->helper->cacheMatch($match, $ns, $s);
 		}
 
 		return $match;
@@ -157,19 +158,6 @@ class syntax_plugin_autolink4_regex extends DokuWiki_Syntax_Plugin {
 			$renderer->doc .= $data[self::$TEXT];
 		}
 		return true;
-	}
-
-
-	/**
-	 * Is one namespace inside another.
-	 *
-	 * @param string $ns - Search inside this namespace.
-	 * @param string $test - Look for this namespace.
-	 * @return bool
-	 */
-	function _inNS($ns, $test) {
-		$len = strlen($test);
-		return !$len || substr($ns, 0, $len) == $test;
 	}
 
 
