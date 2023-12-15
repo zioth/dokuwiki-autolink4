@@ -124,6 +124,7 @@ class helper_plugin_autolink4 extends DokuWiki_Plugin {
 
                 // If there's a matching non-regex pattern, or we cached it after finding the regex patter on the page,
                 // we can load it from the cache.
+		$found = null;
                 if (isset(self::$simpleSubs[$match])) {
                         $found = self::$simpleSubs[$match];
                 }
