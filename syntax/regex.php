@@ -64,6 +64,7 @@ class syntax_plugin_autolink4_regex extends DokuWiki_Syntax_Plugin {
 	 * @param $mode
 	 */
 	function connectTo($mode) {
+		global $ID;
 		foreach ($this->helper->getSubs() as $s) {
 			// Skip links to the current page.
 			if (!$this->_isSamePage($s[self::$TO], $ID)) {
