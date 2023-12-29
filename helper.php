@@ -71,7 +71,7 @@ class helper_plugin_autolink4 extends DokuWiki_Plugin {
 				continue;
 			}
 
-			$data = str_getcsv($line);
+			$data = array_pad(str_getcsv($line), self::$MAX_VAL, '');
 			if (!strlen($data[self::$ORIG]) || !strlen($data[self::$TO])) {
 				continue;
 			}
@@ -118,7 +118,7 @@ class helper_plugin_autolink4 extends DokuWiki_Plugin {
          * Get a simple match
          */
 	public function getMatch($match) {
-               	if (array_key_exists($this->ignoreMatches, $match)) {
+               	if (array_key_exists($match, $this->ignoreMatches)) {
                        	return null;
                 }
 

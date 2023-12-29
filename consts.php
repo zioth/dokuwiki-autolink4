@@ -12,4 +12,6 @@ trait autotooltip4_consts {
 	static $TOOLTIP = 6;
 	static $ONCE = 7;
 	static $INWORD = 8;
+
+	static $MAX_VAL = 8; // Must equal the highest value in this file.
 }
