@@ -1,5 +1,4 @@
 <?php
-require_once(DOKU_PLUGIN.'syntax.php');
 require_once(DOKU_PLUGIN.'autolink4/consts.php');
 
 //TODO: Bugs:
