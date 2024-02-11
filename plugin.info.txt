@@ -1,6 +1,6 @@
 base    autolink4
 author  Eli Fenton
-email
+email   undisclosed@undisclosed.undisclosed
 date    2024-01-15
 name    Autolink 4
 desc    Automatically link a user-defined set of terms, without editing page content.
