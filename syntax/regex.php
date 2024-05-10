@@ -83,7 +83,7 @@ class syntax_plugin_autolink4_regex extends DokuWiki_Syntax_Plugin {
 	 * @return array|string
 	 */
 	function handle($match, $state, $pos, Doku_Handler $handler) {
-		return $this->helper->getMatch($match);
+		return $this->helper->getMatch($match) ?? $match;
 	}
 
 
@@ -98,19 +98,20 @@ class syntax_plugin_autolink4_regex extends DokuWiki_Syntax_Plugin {
 	function render($mode, Doku_Renderer $renderer, $data) {
 		if (is_string($data)) {
 			$renderer->doc .= $data;
-		}
-		else if ($mode == 'xhtml') {
-			if ($this->tooltip && $data[self::$TOOLTIP]) {
+		} else if ($mode == 'xhtml') {
+			if ($this->helper->shouldRenderPlainText($data)) {
+				$renderer->doc .= $data[self::$TEXT];
+			}
+			else if ($this->tooltip && $data[self::$TOOLTIP]) {
 				$renderer->doc .= $this->tooltip->forWikilink($data[self::$TO], $data[self::$TEXT]);
 			}
 			else {
 				$renderer->internallink($data[self::$TO], $data[self::$TEXT]);
 			}
 		}
-		else {
-			if (!$renderer->capture) {
-				return false;
-			}
+		else if (!$renderer->capture) {
+			return false;
+		} else {
 			$renderer->doc .= $data[self::$TEXT];
 		}
 		return true;

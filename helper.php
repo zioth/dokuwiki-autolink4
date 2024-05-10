@@ -115,36 +115,47 @@ class helper_plugin_autolink4 extends DokuWiki_Plugin {
 
 
         /**
-         * Get a simple match
+         * Get match data from a string.
          */
 	public function getMatch($match) {
-               	if (array_key_exists($match, $this->ignoreMatches)) {
-                       	return null;
-                }
-
                 // If there's a matching non-regex pattern, or we cached it after finding the regex patter on the page,
                 // we can load it from the cache.
-		$found = null;
-                if (isset(self::$simpleSubs[$match])) {
-                        $found = self::$simpleSubs[$match];
-                }
+                $found = self::$simpleSubs[$match] ?? null;
+		if ($found != null) {
+			return $found;
+		}
 
-		if ($found == null) {
-			// There's no way to determine which match sent us here, so we have to loop through the whole list.
-			foreach (self::$regexSubs as &$s) {
-				if (preg_match('/^' . $s[self::$MATCH] . '$/', $match)) {
-					// Cache the matched string, so we don't have to loop more than once for the same match.
-					$found = $this->cacheMatch($match, $s);
-					break;
-				}
+		// There's no way to determine which match sent us here, so we have to loop through the whole list.
+		foreach (self::$regexSubs as &$s) {
+			if (preg_match('/^' . $s[self::$MATCH] . '$/', $match)) {
+				// Cache the matched string, so we don't have to loop more than once for the same match.
+				$found = $this->cacheMatch($match, $s);
+				break;
 			}
 		}
-
-		if ($found != null && $found[self::$ONCE]) {
-			$this->ignoreMatches[$match] = true;
-		}
 		return $found;
-	}	
+	}
+
+	/**
+	 * Call this in your xhtml renderer code to decide whether it should be rendered as plain text.
+	 *
+	 * @param Object $data - The return value of getMatch().
+	 */
+	public function shouldRenderPlainText($data) {
+		if (is_string($data)) {
+			return true;
+		}
+		$text = $data[self::$TEXT];
+
+		if (array_key_exists($text, $this->ignoreMatches)) {
+                       	return true;
+               	}
+
+		if ($data[self::$ONCE]) {
+                        $this->ignoreMatches[$text] = true;
+                }
+		return false;
+	}
 
 
         /**
