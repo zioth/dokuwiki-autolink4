@@ -173,12 +173,37 @@ class helper_plugin_autolink4 extends DokuWiki_Plugin {
 	/**
 	 * Is one namespace inside another.
 	 *
-	 * @param string $ns - Search inside this namespace.
-	 * @param string $test - Look for this namespace.
+	 * @param string $contained - Is this namespace...
+	 * @param string $container - Equal to or under this one.
 	 * @return bool
 	 */
-	function inNS($ns, $test) {
-		$len = strlen($test);
-		return !$len || substr($ns, 0, $len) == $test;
+	function inNS(string $contained, ?string $container) {
+                if ($container == null || strlen($container) === 0) {
+                        return true;
+               	}
+
+                $testA = explode(':', $container);
+                $contained = implode(':', array_slice(explode(':', $contained), 0, count($testA)));
+                return $container == $contained;
 	}
 }
+
+/*
+==Unit tests to plug into a PHP sandbox (yeah, I should make these real unit tests)==
+
+function test(string $ns, ?string $test, bool $expected) {
+	if (inNS($ns, $test) != $expected) {
+		echo "Fail: inNS($ns, $test) should be ".($expected?'true':'false')."\n";
+	}
+}
+$tests = [
+	['abc', null, true],
+	['abc', 'abd', false],
+	['abc:d:e', 'abc:d', true],
+	['abc:de', 'abc:d', false],
+	['abc', 'abc:d', false],
+];
+foreach ($tests as $t) {
+	test($t[0], $t[1], $t[2]);
+}
+*/
