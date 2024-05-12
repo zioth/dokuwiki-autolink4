@@ -146,13 +146,15 @@ class helper_plugin_autolink4 extends DokuWiki_Plugin {
 			return true;
 		}
 		$text = $data[self::$TEXT];
+		$match = $data[self::$MATCH] ?? $text;
 
-		if (array_key_exists($text, $this->ignoreMatches)) {
+		if (array_key_exists($text, $this->ignoreMatches) || array_key_exists($match, $this->ignoreMatches)) {
                        	return true;
                	}
 
 		if ($data[self::$ONCE]) {
                         $this->ignoreMatches[$text] = true;
+			$this->ignoreMatches[$match] = true;
                 }
 		return false;
 	}
